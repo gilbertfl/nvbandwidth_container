@@ -1,0 +1,26 @@
+# Container for 
+FROM nvidia/cuda:12.3.2-devel-ubuntu22.04 AS builder
+
+#Install nvidia kernel drivers
+# Pre-install steps
+RUN apt update && apt-get install -y wget
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+dpkg -i cuda-keyring_1.1-1_all.deb && apt update
+
+#Install the prerequisite Nvidia headers
+RUN apt install -y  linux-headers-5.15.0-1076-nvidia-lowlatency 
+
+#Download and build nvbandwidth
+RUN apt install -y libboost-program-options-dev git 
+RUN git clone https://github.com/NVIDIA/nvbandwidth.git 
+
+WORKDIR /nvbandwidth
+RUN /nvbandwidth/debian_install.sh
+
+FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04 AS runner
+
+COPY --chmod=755 --from=builder /nvbandwidth/nvbandwidth /nvbandwidth
+
+ENTRYPOINT [ "/nvbandwidth" ]
+CMD ["--help"]
+
